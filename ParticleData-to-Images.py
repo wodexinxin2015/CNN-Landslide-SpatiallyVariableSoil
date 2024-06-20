@@ -56,16 +56,20 @@ while flag:
         parti_x = np.resize(parti_x_0, (n_nonb, 3))
         parti_para = np.resize(parti_para_0, (n_nonb, 4))
 
-        fldata_2 = particle_file.readlines()[0:n_nonb + 1]
-        for k in range(0, n_nonb):
+        fldata_2 = particle_file.readlines()
+        k_1 = 0
+        for k in range(len(fldata_2) - 2):
             flline_k = fldata_2[k + 1].split()
-            parti_x[k][0] = float(flline_k[1])
-            parti_x[k][1] = float(flline_k[2])
-            parti_x[k][2] = float(flline_k[3])
-            parti_para[k][0] = float(flline_k[4])
-            parti_para[k][1] = float(flline_k[5]) / 1000.0
-            parti_para[k][2] = float(flline_k[6])
-            parti_para[k][3] = float(flline_k[7])
+            type = int(flline_k[8])
+            if type > 0:
+                parti_x[k_1][0] = float(flline_k[1])
+                parti_x[k_1][1] = float(flline_k[2])
+                parti_x[k_1][2] = float(flline_k[3])
+                parti_para[k_1][0] = float(flline_k[4])
+                parti_para[k_1][1] = float(flline_k[5]) / 1000.0
+                parti_para[k_1][2] = float(flline_k[6])
+                parti_para[k_1][3] = float(flline_k[7])
+                k_1 = k_1 + 1
         # ----------------------------------------------------------------------------------------------------------
         # calculate the grid in the rectangle that covers the landslide model and find particles in each grid
         range_min = (parti_x.min(axis=0)).T  # the left and lower corner of rectangle or box
