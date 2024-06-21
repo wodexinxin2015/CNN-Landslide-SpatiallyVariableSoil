@@ -1,8 +1,8 @@
 # ----------------------------------------------------------------------------------------------------------------------
 # ParticleData-to-Images.py
-# -to convert the particle data file with spatially variable strength parameters to image data (*.imd)
+# -to convert the particle data file with spatially variable parameters to image data (*.imd)
 # -to pad free area with additional data information in a rectangle that covers the landslide model
-# -Coded by Prof. Zhang, GeoHohai, Hohai University, Nanjing, China
+# -Coded by Prof. Weijie Zhang, GeoHohai, Hohai University, Nanjing, China
 # ----------------------------------------------------------------------------------------------------------------------
 import os
 import numpy as np
@@ -23,7 +23,7 @@ while flag:
     if os.sep == "/":  # linux platform
         file_path = proj_path + r'/Parameters.txt'
         file_path_set = proj_path + r'/input.dat'
-        label_file =  proj_path + r'/label.txt'
+        label_file = proj_path + r'/label.txt'
     else:  # windows platform
         file_path = proj_path + r'\Parameters.txt'
         file_path_set = proj_path + r'\input.dat'
@@ -128,4 +128,3 @@ while flag:
 # ------------------------------------------------------------------------------------------------------------------
 else:
     exit(0)
-
