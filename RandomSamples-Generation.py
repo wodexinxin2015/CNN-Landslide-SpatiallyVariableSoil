@@ -81,7 +81,7 @@ if os.path.exists(input_path):
         randf_svp[k - 95][3] = float(flline_6[5])  # correlation length: y
         randf_svp[k - 95][4] = float(flline_6[6])  # correlation length: z
         randf_svp[k - 95][5] = float(flline_6[7])  # coe_depth
-    # ----------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
     # building the auto correlation function matrix for the random field
     # determine the range of non-boundary particles
     range_min = (parti_x.min(axis=0)).T  # the left and lower corner of rectangle or box
@@ -97,7 +97,7 @@ if os.path.exists(input_path):
     x_base[0] = -(grid_dim[0] * cell_dr - (range_max[0] - range_min[0])) / 2.0 + 0.01 * dr + range_min[0]
     x_base[1] = -(grid_dim[1] * cell_dr - (range_max[1] - range_min[1])) / 2.0 + 0.01 * dr + range_min[1]
     x_base[2] = -(grid_dim[2] * cell_dr - (range_max[2] - range_min[2])) / 2.0 + 0.01 * dr + range_min[2]
-    # ----------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
     # calculate the coordinate of each cell
     cell_total = grid_dim[0] * grid_dim[1] * grid_dim[2]
     x_cell = np.zeros(cell_total * 3, 'f4').reshape(cell_total, 3)
@@ -114,7 +114,7 @@ if os.path.exists(input_path):
             x_cell[k][0] = x_base[0] + (float(np_x) + 0.5) * cell_dr
             x_cell[k][1] = x_base[1] + (float(np_y) + 0.5) * cell_dr
             x_cell[k][2] = x_base[2] + (float(np_z) + 0.5) * cell_dr
-    # ----------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
     # calculate the auto correlation matrix and calculate the lower triangular matrix
     mat_corr = np.zeros(6 * cell_total * cell_total, 'f4').reshape((6, cell_total, cell_total))
     mat_corr_L = np.zeros(6 * cell_total * cell_total, 'f4').reshape((6, cell_total, cell_total))
@@ -134,7 +134,7 @@ if os.path.exists(input_path):
                     mat_corr[id_svp][i][j] = acf
             # Cholesky decomposition to get the lower triangular matrix
             mat_corr_L[id_svp] = np.linalg.cholesky(mat_corr[id_svp])
-    # ----------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
     # generating random field one by one or correlated random field
     covar_mat = np.zeros(2 * 2, 'f4').reshape(2, 2)
     zeta_rnd_1 = np.zeros(cell_total * 2, 'f4').reshape(cell_total, 2)
@@ -341,7 +341,7 @@ if os.path.exists(input_path):
                     parti_para[pid][1] = grid_para[cell_id][1]
                     parti_para[pid][2] = grid_para[cell_id][2]
                     parti_para[pid][3] = grid_para[cell_id][3]
-        # ------------------------------------------------------------------------------------------------------------------
+        # --------------------------------------------------------------------------------------------------------------
         # output the random field to parameters.txt
         if os.sep == "/":
             output_txt_path = proj_path + r'/Para-' + f"{steps:0>5}" + r'.txt'  # linux platform
@@ -354,7 +354,7 @@ if os.path.exists(input_path):
                                    f"{parti_para[pid][0]:8.6e} {parti_para[pid][1]:8.6e} {parti_para[pid][2]:8.6e} "
                                    f"{parti_para[pid][3]:8.6e} {parti_nonb_type[pid]:>3}   0")
             out_txt_file.write(r"No.---- X----Y----Z----fai----c----cop----ds----type----matype----")
-        # ----------------------------------------------------------------------------------------------------------------------
+        # --------------------------------------------------------------------------------------------------------------
         # write to imd file
         # calculate the grid in the rectangle that covers the landslide model and find particles in each grid
         range_min = (parti_x.min(axis=0)).T  # the left and lower corner of rectangle or box
@@ -378,7 +378,7 @@ if os.path.exists(input_path):
 
             if 0 <= grid_id < cell_num:
                 grid_para_1[grid_id] = parti_para[part_id]
-        # ----------------------------------------------------------------------------------------------------------
+        # --------------------------------------------------------------------------------------------------------------
         # out put to results file with designated name
         if ndim == 2:
             feat_ten = torch.from_numpy(grid_para_1.reshape((4, grid_dim[0], grid_dim[1])))

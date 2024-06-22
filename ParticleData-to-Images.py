@@ -103,7 +103,7 @@ while flag:
         if os.sep == "/":  # linux platform
             file_feature_out = proj_path + r'/features-' + f"{no_file:0>4}" + r'.imd'
         else:  # Windows platform
-            file_feature_out = proj_path + r'\\feature-' + f"{no_file:0>4}" + r'.imd'
+            file_feature_out = proj_path + r'\\features-' + f"{no_file:0>4}" + r'.imd'
         torch.save(feat_ten, file_feature_out)
 
         if os.path.exists(label_file):
