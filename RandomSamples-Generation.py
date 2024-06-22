@@ -39,6 +39,7 @@ if os.path.exists(input_path):
             n_nonb = n_nonb + 1
     parti_x = np.zeros(n_nonb * 3, 'f4').reshape(n_nonb, 3)
     parti_para = np.zeros(n_nonb * 4, 'f4').reshape(n_nonb, 4)
+    parti_nonb_type = np.zeros(n_nonb, 'i4').reshape(n_nonb, 1)
     k_1 = 0
     for k in range(253, ntotal + 253):
         if parti_type[k - 253] > 0:
@@ -46,6 +47,7 @@ if os.path.exists(input_path):
             parti_x[k_1][0] = float(flline[0])
             parti_x[k_1][1] = float(flline[1])
             parti_x[k_1][2] = float(flline[2])
+            parti_nonb_type[k_1] = parti_type[k - 253]
             k_1 = k_1 + 1
     # ------------------------------------------------------------------------------------------------------------------
     # read random field parameters from input.dat
@@ -100,12 +102,12 @@ if os.path.exists(input_path):
     for k in range(0, cell_total):
         if ndim == 2:
             np_x = k % grid_dim[0]
-            np_y = k / grid_dim[0]
+            np_y = int(k / grid_dim[0])
             x_cell[k][0] = x_base[0] + (float(np_x) + 0.5) * cell_dr
             x_cell[k][1] = x_base[1] + (float(np_y) + 0.5) * cell_dr
         else:
-            np_z = k / (grid_dim[0] * grid_dim[1])
-            np_y = (k % (grid_dim[0] * grid_dim[1])) / grid_dim[0]
+            np_z = int(k / (grid_dim[0] * grid_dim[1]))
+            np_y = int((k % (grid_dim[0] * grid_dim[1])) / grid_dim[0])
             np_x = (k % (grid_dim[0] * grid_dim[1])) % grid_dim[0]
             x_cell[k][0] = x_base[0] + (float(np_x) + 0.5) * cell_dr
             x_cell[k][1] = x_base[1] + (float(np_y) + 0.5) * cell_dr
@@ -133,6 +135,11 @@ if os.path.exists(input_path):
 # ----------------------------------------------------------------------------------------------------------------------
     # generating random field one by one or correlated random field
     covar_mat = np.zeros(2 * 2, 'f4').reshape(2, 2)
+    zeta_rnd_1 = np.zeros(cell_total * 2, 'f4').reshape(cell_total, 2)
+    grid_para = np.zeors(cell_total * 6, 'f4').reshape(cell_total, 6)
+    mean_value = np.zeros(cell_total * 2, 'f4').reshape(cell_total, 2)
+    std_value = np.zeros(cell_total * 2, 'f4').reshape(cell_total, 2)
+    x_id = np.zeros(3, "i4").reshape((3, 1))
     samples_num = int(input("Input the directory of input.dat: \n"))  # number of random field samples
     for steps in range(0, samples_num):
         if randf_flag[0] == 1 and randf_flag[1] == 1:   # correlated strength parameters for soil
@@ -148,7 +155,7 @@ if os.path.exists(input_path):
                 temp1 = randf_para[1]
                 coe_corr = np.log(1.0 + temp1 * (std_0 / mean_0) * (std_1 / mean_1))
                 coe_corr = coe_corr / np.sqrt(np.log(1.0 + std_0 * std_0 / mean_0 / mean_0) * np.log(1.0 + std_1 * std_1
-                                                                                                     / mean_1 / mean_1))
+                                                                                      / mean_1 / mean_1))
             else:
                 coe_corr = randf_para[1]
             # correlation matrix C
@@ -156,39 +163,231 @@ if os.path.exists(input_path):
             covar_mat[0][1] = coe_corr
             covar_mat[1][0] = 0.0
             covar_mat[1][1] = np.sqrt(1.0 - coe_corr * coe_corr)
-
-
-
+            # generating standard normal distributed variables (cell_total * 2)
+            zeta_rnd = np.random.randn(cell_total, 2)
+            zeta_rnd_1 = zeta_rnd @ covar_mat
+            vec_E =  mat_corr_L[0] @ zeta_rnd_1
+            # generating random field for cells
+            if type_dist == 1: # normal disttribution
+                for k in range(0, cell_total):
+                    if ndim == 2:
+                        mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                        mean_value[k][1] = mean_1 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                    else:
+                        mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+                        mean_value[k][1] = mean_1 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+                grid_para[:][0] = mean_value[:][0] + std_0 * vec_E[:][0]
+                grid_para[:][1] = mean_value[:][1] + std_1 * vec_E[:][1]
+                grid_para[:][3] = 1.0
+            else: # log normal distribution
+                for k in range(0, cell_total):
+                    if ndim == 2:
+                        mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                        mean_value[k][1] = mean_1 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                    else:
+                        mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+                        mean_value[k][1] = mean_1 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+                std_value[:][0] = np.sqrt(np.log(1.0 + (std_0 / mean_value[:][0]) * (std_0 / mean_value[:][0])))
+                std_value[:][1] = np.sqrt(np.log(1.0 + (std_1 / mean_value[:][1]) * (std_1 / mean_value[:][1])))
+                mean_value[:][0] = np.log(mean_value[:][0]) - 0.5* std_value[:][0] * std_value[:][0]
+                mean_value[:][0] = np.log(mean_value[:][1]) - 0.5* std_value[:][1] * std_value[:][1]
+                grid_para[:][0] = mean_value[:][0] + std_value[:][0] * vec_E[:][0]
+                grid_para[:][1] = mean_value[:][1] + std_value[:][1] * vec_E[:][1]
+                grid_para[:][3] = 1.0
+            # setting parameters in cell to particles
+            for pid in range(0, n_nonb):
+                if parti_nonb_type[pid] == 2: # soil particle
+                    np_x = int(np.abs(parti_x[pid][0] - x_base[0]) / cell_dr)
+                    np_y = int(np.abs(parti_x[pid][1] - x_base[1]) / cell_dr)
+                    np_z = int(np.abs(parti_x[pid][2] - x_base[2]) / cell_dr)
+                    cell_id = np_z * grid_dim[0] * grid_dim[1] + np_y * grid_dim[0] + np_x;
+                    parti_para[pid][0] = grid_para[cell_id][0]
+                    parti_para[pid][1] = grid_para[cell_id][1]
+                    parti_para[pid][3] = grid_para[cell_id][3]
         elif randf_flag[4] == 1 and randf_flag[5] == 1:   # correlated strength parameters for fluid
             # setting parameters
-            type_dist = randf_svf[0][1]
+            type_dist = randf_svf[4][1]
             mean_0 = randf_svp[4][0]
             std_0 = randf_svp[4][1]
             mean_1 = randf_svp[5][0]
             std_1 = randf_svp[5][1]
-            coe_depth = randf_svp[0][5]
+            coe_depth = randf_svp[4][5]
             # calculate the updated correlation coefficient
             if type_dist == 2:
                 temp1 = randf_para[1]
                 coe_corr = np.log(1.0 + temp1 * (std_0 / mean_0) * (std_1 / mean_1))
                 coe_corr = coe_corr / np.sqrt(np.log(1.0 + std_0 * std_0 / mean_0 / mean_0) * np.log(1.0 + std_1 * std_1
-                                                                                                     / mean_1 / mean_1))
+                                                                                      / mean_1 / mean_1))
             else:
                 coe_corr = randf_para[1]
-
+            # correlation matrix C
+            covar_mat[0][0] = 1.0
+            covar_mat[0][1] = coe_corr
+            covar_mat[1][0] = 0.0
+            covar_mat[1][1] = np.sqrt(1.0 - coe_corr * coe_corr)
+            # generating standard normal distributed variables (cell_total * 2)
+            zeta_rnd = np.random.randn(cell_total, 2)
+            zeta_rnd_1 = zeta_rnd @ covar_mat
+            vec_E =  mat_corr_L[4] @ zeta_rnd_1
+            # generating random field for cells
+            if type_dist == 1: # normal disttribution
+                for k in range(0, cell_total):
+                    if ndim == 2:
+                        mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                        mean_value[k][1] = mean_1 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                    else:
+                        mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+                        mean_value[k][1] = mean_1 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+                grid_para[:][4] = mean_value[:][0] + std_0 * vec_E[:][0]
+                grid_para[:][5] = mean_value[:][1] + std_1 * vec_E[:][1]
+                grid_para[:][3] = 1.0
+            else: # log normal distribution
+                for k in range(0, cell_total):
+                    if ndim == 2:
+                        mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                        mean_value[k][1] = mean_1 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                    else:
+                        mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+                        mean_value[k][1] = mean_1 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+                std_value[:][0] = np.sqrt(np.log(1.0 + (std_0 / mean_value[:][0]) * (std_0 / mean_value[:][0])))
+                std_value[:][1] = np.sqrt(np.log(1.0 + (std_1 / mean_value[:][1]) * (std_1 / mean_value[:][1])))
+                mean_value[:][0] = np.log(mean_value[:][0]) - 0.5* std_value[:][0] * std_value[:][0]
+                mean_value[:][0] = np.log(mean_value[:][1]) - 0.5* std_value[:][1] * std_value[:][1]
+                grid_para[:][4] = mean_value[:][0] + std_value[:][0] * vec_E[:][0]
+                grid_para[:][5] = mean_value[:][1] + std_value[:][1] * vec_E[:][1]
+                grid_para[:][3] = 1.0
+            # setting parameters in cell to particles
+            for pid in range(0, n_nonb):
+                if parti_nonb_type[pid] == 1: # fluid particle
+                    np_x = int(np.abs(parti_x[pid][0] - x_base[0]) / cell_dr)
+                    np_y = int(np.abs(parti_x[pid][1] - x_base[1]) / cell_dr)
+                    np_z = int(np.abs(parti_x[pid][2] - x_base[2]) / cell_dr)
+                    cell_id = np_z * grid_dim[0] * grid_dim[1] + np_y * grid_dim[0] + np_x;
+                    parti_para[pid][0] = grid_para[cell_id][4]
+                    parti_para[pid][1] = grid_para[cell_id][5]
+                    parti_para[pid][3] = grid_para[cell_id][3]
         else:   # other case one by one
             for id_svp in range(1, 6):
                 if randf_flag[id_svp] > 0:
-                    type_dist = randf_svf[0][1]
-                    mean_0 = randf_svp[0][0]
-                    std_0 = randf_svp[0][1]
-                    coe_depth = randf_svp[0][5]
+                    # setting parameters
+                    type_dist = randf_svf[4][1]
+                    mean_0 = randf_svp[4][0]
+                    std_0 = randf_svp[4][1]
+                    coe_depth = randf_svp[4][5]
+                    # generating standard normal distributed variables (cell_total * 2)
+                    zeta_rnd = np.random.randn(cell_total, 1)
+                    vec_E =  mat_corr_L[4] @ zeta_rnd
+                    # generating random field for cells
+                    if type_dist == 1: # normal disttribution
+                        for k in range(0, cell_total):
+                            grid_para[k][3] = 1.0
+                            if ndim == 2:
+                                mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                            else:
+                                mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+
+                            if id_svp == 0: # friction angle for soil
+                                grid_para[k][0] = mean_value[k][0] + std_0 * vec_E[k]                                
+                            elif id_svp == 1: # cohesion for soil
+                                grid_para[k][1] = mean_value[k][0] + std_0 * vec_E[k]                       
+                            elif id_svp == 2: # coefficient of permeability for soil
+                                grid_para[k][2] = mean_value[k][0] + std_0 * vec_E[k]                  
+                            elif id_svp == 3: # soil skeleton size
+                                grid_para[k][3] = mean_value[k][0] + std_0 * vec_E[k]
+                            elif id_svp == 4: # friction angle for fluid model
+                                grid_para[k][4] = mean_value[k][0] + std_0 * vec_E[k]
+                            else: # cohesion for fluid model
+                                grid_para[k][5] = mean_value[k][0] + std_0 * vec_E[k]
+
+                    else: # log normal distribution
+                        for k in range(0, cell_total):
+                            grid_para[k][3] = 1.0
+                            if ndim == 2:
+                                mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                            else:
+                                mean_value[k][0] = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+
+                            std_value[k][0] = np.sqrt(np.log(1.0 + (std_0 / mean_value[k][0]) * (std_0 
+                                                                                                 / mean_value[k][0])))
+                            mean_value[k][0] = np.log(mean_value[k][0]) - 0.5* std_value[k][0] * std_value[k][0]
+
+                            if id_svp == 0: # friction angle for soil
+                                grid_para[k][0] = np.exp(mean_value[k][0] + std_value[k][0] * vec_E[k])
+                            elif id_svp == 1: # cohesion for soil
+                                grid_para[k][1] = np.exp(mean_value[k][0] + std_value[k][0] * vec_E[k])                 
+                            elif id_svp == 2: # coefficient of permeability for soil
+                                grid_para[k][2] = np.exp(mean_value[k][0] + std_value[k][0] * vec_E[k])                
+                            elif id_svp == 3: # soil skeleton size
+                                grid_para[k][3] = np.exp(mean_value[k][0] + std_value[k][0] * vec_E[k]) 
+                            elif id_svp == 4: # friction angle for fluid model
+                                grid_para[k][4] = np.exp(mean_value[k][0] + std_value[k][0] * vec_E[k])
+                            else: # cohesion for fluid model
+                                grid_para[k][5] = np.exp(mean_value[k][0] + std_value[k][0] * vec_E[k])
+            # setting parameters in cell to particles
+            for pid in range(0, n_nonb):
+                np_x = int(np.abs(parti_x[pid][0] - x_base[0]) / cell_dr)
+                np_y = int(np.abs(parti_x[pid][1] - x_base[1]) / cell_dr)
+                np_z = int(np.abs(parti_x[pid][2] - x_base[2]) / cell_dr)
+                cell_id = np_z * grid_dim[0] * grid_dim[1] + np_y * grid_dim[0] + np_x;
+                if parti_nonb_type[pid] == 1: # fluid particle
+                    parti_para[pid][0] = grid_para[cell_id][4]
+                    parti_para[pid][1] = grid_para[cell_id][5]
+                    parti_para[pid][2] = grid_para[cell_id][2]
+                    parti_para[pid][3] = grid_para[cell_id][3]
+                elif parti_nonb_type[pid] == 2: # soil particle
+                    parti_para[pid][0] = grid_para[cell_id][0]
+                    parti_para[pid][1] = grid_para[cell_id][1]
+                    parti_para[pid][2] = grid_para[cell_id][2]
+                    parti_para[pid][3] = grid_para[cell_id][3]
+# ------------------------------------------------------------------------------------------------------------------
+        # output the random field to parameters.txt
+        if os.sep == "/":
+            output_txt_path = proj_path + r'/Para-' + f"{steps:0>5}" + r'.txt' # linux platform
+        else:
+            output_txt_path = proj_path + r'\Para-' + f"{steps:0>5}" + r'.txt' # windows platform  
+        with open(output_txt_path, 'w') as out_txt_file:
+            out_txt_file.write("No.---- X----Y----Z----fai----c----cop----ds----type----matype----")
+            for pid in range(0, n_nonb):
+                line = f"{pid:>9}" + f" {parti_x[pid][0]:8.6e} {parti_x[pid][1]:8.6e} {parti_x[pid][2]:8.6e}" + f" 
+                {parti_para[pid][0]:8.6e} {parti_para[pid][1]:8.6e} {parti_para[pid][2]:8.6e} {parti_para[pid][2]:8.6e}"
+                + f"{parti_nonb_type[pid]:>3}   0"
+                out_txt_file.write(line)
+            out_txt_file.write("No.---- X----Y----Z----fai----c----cop----ds----type----matype----")
 # ----------------------------------------------------------------------------------------------------------------------
+        # write to imd file
+        # calculate the grid in the rectangle that covers the landslide model and find particles in each grid
+        range_min = (parti_x.min(axis=0)).T  # the left and lower corner of rectangle or box
+        range_max = (parti_x.max(axis=0)).T  # the right and upper corner of rectangle or box
 
+        grid_dim[0] = int((range_max[0] - range_min[0]) / dr) + 1
+        grid_dim[1] = int((range_max[1] - range_min[1]) / dr) + 1
+        grid_dim[2] = int((range_max[2] - range_min[2]) / dr) + 1
 
-# ----------------------------------------------------------------------------------------------------------------------
+        grid_para_1 = np.resize(grid_para, (grid_dim[0] * grid_dim[1] * grid_dim[2], 4))
 
+        cell_num = grid_dim[0] * grid_dim[1] * grid_dim[2]
+        for part_id in range(0, n_nonb):  # calculate grid_id for each particle
+            x_id[0] = int((parti_x[part_id][0] - range_min[0]) / dr + 0.2)
+            x_id[1] = int((parti_x[part_id][1] - range_min[1]) / dr + 0.2)
+            x_id[2] = int((parti_x[part_id][2] - range_min[2]) / dr + 0.2)
+            if ndim == 2:
+                grid_id = x_id[1] * grid_dim[0] + x_id[0]
+            else:
+                grid_id = x_id[0] * grid_dim[2] * grid_dim[1] + x_id[2] * grid_dim[1] + x_id[1]
 
+            if 0 <= grid_id < cell_num:
+                grid_para_1[grid_id] = parti_para[part_id]
+        # ----------------------------------------------------------------------------------------------------------
+        # out put to results file with designated name
+        if ndim == 2:
+            feat_ten = torch.from_numpy(grid_para_1.reshape((4, grid_dim[0], grid_dim[1])))
+        else:
+            feat_ten = torch.from_numpy(grid_para_1.reshape((4 * grid_dim[0], grid_dim[1], grid_dim[2])))
+        if os.sep == "/":  # linux platform
+            file_feature_out = proj_path + '/features-' + f"{steps:0>5}" + r'.imd'
+        else:  # Windows platform
+            file_feature_out = proj_path + '\\faeture-' + f"{steps:0>5}" + r'.imd'
+        torch.save(feat_ten, file_feature_out)
 # ----------------------------------------------------------------------------------------------------------------------
 else:
     exit(2)
