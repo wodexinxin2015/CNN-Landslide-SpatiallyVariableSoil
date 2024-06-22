@@ -101,17 +101,17 @@ while flag:
         else:
             feat_ten = torch.from_numpy(grid_para.reshape((4 * grid_dim[0], grid_dim[1], grid_dim[2])))
         if os.sep == "/":  # linux platform
-            file_feature_out = proj_path + '/features-' + f"{no_file:0>4}" + r'.imd'
+            file_feature_out = proj_path + r'/features-' + f"{no_file:0>4}" + r'.imd'
         else:  # Windows platform
-            file_feature_out = proj_path + '\\faeture-' + f"{no_file:0>4}" + r'.imd'
+            file_feature_out = proj_path + r'\\feature-' + f"{no_file:0>4}" + r'.imd'
         torch.save(feat_ten, file_feature_out)
 
         if os.path.exists(label_file):
             label_ten = torch.from_numpy(np.loadtxt(label_file))
             if os.sep == "/":  # linux platform
-                file_feature_out = proj_path + '/label-' + f"{no_file:0>4}" + r'.imd'
+                file_feature_out = proj_path + r'/label-' + f"{no_file:0>4}" + r'.imd'
             else:  # Windows platform
-                file_feature_out = proj_path + '\\label-' + f"{no_file:0>4}" + r'.imd'
+                file_feature_out = proj_path + r'\\label-' + f"{no_file:0>4}" + r'.imd'
             torch.save(label_ten, file_feature_out)
         else:
             exit(1)
