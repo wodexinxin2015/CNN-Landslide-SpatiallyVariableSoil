@@ -82,8 +82,8 @@ def random_samples_generate_kl(proj_path):  # generating random field of landsli
         # ------------------------------------------------------------------------------------------------------------------
         # building the auto correlation function matrix for the random field
         # determine the range of non-boundary particles
-        range_min = (parti_x.min(axis=0)).T  # the left and lower corner of rectangle or box
-        range_max = (parti_x.max(axis=0)).T  # the right and upper corner of rectangle or box
+        range_min = (np.min(parti_x, axis=0)).T  # the left and lower corner of rectangle or box
+        range_max = (np.max(parti_x, axis=0)).T  # the right and upper corner of rectangle or box
 
     else:
         exit(2)
@@ -162,8 +162,8 @@ def random_samples_generate_midp(proj_path):  # generating random field of lands
         # ------------------------------------------------------------------------------------------------------------------
         # building the auto correlation function matrix for the random field
         # determine the range of non-boundary particles
-        range_min = (parti_x.min(axis=0)).T  # the left and lower corner of rectangle or box
-        range_max = (parti_x.max(axis=0)).T  # the right and upper corner of rectangle or box
+        range_min = (np.min(parti_x, axis=0)).T  # the left and lower corner of rectangle or box
+        range_max = (np.max(parti_x, axis=0)).T  # the right and upper corner of rectangle or box
         range_min = range_min - 0.1 * (range_max - range_min)
         range_max = range_max + 0.1 * (range_max - range_min)
         cell_dr = randf_para[0] * dr

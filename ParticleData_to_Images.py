@@ -74,8 +74,8 @@ def particle_to_images():
                     k_1 = k_1 + 1
             # ----------------------------------------------------------------------------------------------------------
             # calculate the grid in the rectangle that covers the landslide model and find particles in each grid
-            range_min = (parti_x.min(axis=0)).T  # the left and lower corner of rectangle or box
-            range_max = (parti_x.max(axis=0)).T  # the right and upper corner of rectangle or box
+            range_min = (np.min(parti_x, axis=0)).T  # the left and lower corner of rectangle or box
+            range_max = (np.max(parti_x, axis=0)).T  # the right and upper corner of rectangle or box
 
             grid_dim[0] = int((range_max[0] - range_min[0]) / dr) + 1
             grid_dim[1] = int((range_max[1] - range_min[1]) / dr) + 1
