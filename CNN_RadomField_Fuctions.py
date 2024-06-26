@@ -18,11 +18,11 @@ def equation_ramdai(dirac, wi_v):
 # define the function of faii
 def equation_faii(x, a, wi_v, i):
     if (i + 1) % 2 == 1:
-        alphai = 1.0 / np.sqrt(np.sin(2.0 * wi * a) / 2.0 / wi + a)
-        faii = alphai * np.cos(wi * x)
+        alphai = 1.0 / np.sqrt(np.sin(2.0 * wi_v * a) / 2.0 / wi_v + a)
+        faii = alphai * np.cos(wi_v * x)
     else:
-        alphai = 1.0 / np.sqrt(-np.sin(2.0 * wi * a) / 2.0 / wi + a)
-        faii = alphai * np.sin(wi * x)
+        alphai = 1.0 / np.sqrt(-np.sin(2.0 * wi_v * a) / 2.0 / wi_v + a)
+        faii = alphai * np.sin(wi_v * x)
     return faii
 
 
@@ -48,8 +48,8 @@ def solve_wii(wi, a_x, dirac_r, ndim, klterm):
                         x1 = xm
                         xm = (x1 + x2) * 0.5
             else:  # even term
-                x1 = (i + 0.5) * np.pi / a + precision
-                x2 = (i + 1.0) * np.pi / a - precision
+                x1 = (i + 0.5) * np.pi / a + 1.0e-6
+                x2 = (i + 1.0) * np.pi / a - 1.0e-6
                 xm = (x1 + x2) * 0.5
                 fm = 2.0 / dira * np.tan(xm * a) + xm
                 while np.fabs(fm) > 1.0e-6:
@@ -78,7 +78,7 @@ def solve_ramdai(eigval, wi, dirac_r, order_id, ndim, klterm):
 
     if ndim == 2:
         # calculate the value of eigval_2d
-        eigval_2d = np.zeros(klterm * klterm, 'f4').reshape(klterm, klterm)
+        eigval_2d = np.zeros(klterm * klterm, 'f4').reshape((klterm, klterm))
         for i in range(0, klterm):
             for j in range(0, klterm):
                 eigval_2d[i][j] = ramda[i][0] * ramda[j][1]
@@ -94,7 +94,7 @@ def solve_ramdai(eigval, wi, dirac_r, order_id, ndim, klterm):
             eigval_2d[order_id[i][0]][order_id[i][1]] = 0.0
     else:
         # calculate the value of eigval_3d
-        eigval_3d = np.zeros(klterm * klterm * klterm, 'f4').reshape(klterm, klterm, klterm)
+        eigval_3d = np.zeros(klterm * klterm * klterm, 'f4').reshape((klterm, klterm, klterm))
         for i in range(0, klterm):
             for j in range(0, klterm):
                 for k in range(0, klterm):

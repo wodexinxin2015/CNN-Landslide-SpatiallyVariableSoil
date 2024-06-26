@@ -10,7 +10,7 @@ import torch
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def random_samples_generate_KL(proj_path):  # generating random field of landslides using the K-L expansion method
+def random_samples_generate_kl(proj_path):  # generating random field of landslides using the K-L expansion method
     # setting the problem parameters and random field parameters
     if os.sep == "/":
         input_path = proj_path + r'/input.dat'  # linux platform
@@ -90,7 +90,7 @@ def random_samples_generate_KL(proj_path):  # generating random field of landsli
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def random_samples_generate_MIDP(proj_path):  # generating random field of landslides using the Mid-Point method
+def random_samples_generate_midp(proj_path):  # generating random field of landslides using the Mid-Point method
     # setting the problem parameters and random field parameters
     if os.sep == "/":
         input_path = proj_path + r'/input.dat'  # linux platform

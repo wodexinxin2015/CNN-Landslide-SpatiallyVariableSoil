@@ -62,8 +62,8 @@ def particle_to_images():
             k_1 = 0
             for k in range(len(fldata_2) - 2):
                 flline_k = fldata_2[k + 1].split()
-                type = int(flline_k[8])
-                if type > 0:
+                type_par = int(flline_k[8])
+                if type_par > 0:
                     parti_x[k_1][0] = float(flline_k[1])
                     parti_x[k_1][1] = float(flline_k[2])
                     parti_x[k_1][2] = float(flline_k[3])

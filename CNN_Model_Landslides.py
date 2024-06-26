@@ -7,10 +7,11 @@ import numpy as np
 import torch
 import os
 from ParticleData_to_Images import particle_to_images
-from RandomSamples_Generation import random_samples_generate_KL
-from RandomSamples_Generation import random_samples_generate_MIDP
+from RandomSamples_Generation import random_samples_generate_kl
+from RandomSamples_Generation import random_samples_generate_midp
 from CNN_Model_Functions import train_test_cnn_function
 from CNN_Model_Functions import prediction_cnn_function
+from CNN_Model_Functions import cross_validation_function
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -41,9 +42,9 @@ while check:
         # input the type of random field generating method
         gen_type = int(input("Input the type of random field generating method:1--KL expansion;2--Mid-point method \n"))
         if gen_type == 1:
-            random_samples_generate_KL(proj_path)   # 2--generating random samples of landslide using KL expansion
+            random_samples_generate_kl(proj_path)   # 2--generating random samples of landslide using KL expansion
         elif gen_type == 2:
-            random_samples_generate_MIDP(proj_path)   # 2--generating random samples of landslide using KL expansion
+            random_samples_generate_midp(proj_path)   # 2--generating random samples of landslide using KL expansion
         else:
             print("Incorrect type of random field generating method.")
     elif type_mode == 3:
