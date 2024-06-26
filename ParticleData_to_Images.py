@@ -10,7 +10,7 @@ import torch
 
 
 # ------------------------------------------------------------------------------------------------------------------
-def particle_to_images(proj_path):
+def particle_to_images():
     parti_type_0 = np.zeros(4 * 1, 'i4')  # particle type: main type
     parti_x_0 = np.zeros(4 * 3, 'f4')  # x, y, z of particle coordinates
     parti_para_0 = np.zeros(4 * 4, 'f4')  # strength parameters: friction angle, cohesion; cop, ds
@@ -20,6 +20,7 @@ def particle_to_images(proj_path):
     flag = True
     no_file = 1
     while flag:
+        proj_path = input("Please input the working folder: \n")
         # input the file folder
         if os.sep == "/":  # linux platform
             file_path = proj_path + r'/Parameters.txt'
@@ -118,14 +119,8 @@ def particle_to_images(proj_path):
                 return 1
             # ----------------------------------------------------------------------------------------------------------
             # Continue (y) or Exit (n)
-            chara = input("Continue (y) or Exit (n):  \n")
+            chara = input("Continue (y) or Exit (n) for the particle data to images:  \n")
             flag = (chara == 'y' or chara == 'Y')
             no_file = no_file + 1
-        else:
-            print("There is no input.dat file in working directory. \n")
-            chara = input("Continue (y) or Exit (n):  \n")
-            flag = (chara == 'y' or chara == 'Y')
 
-    # ------------------------------------------------------------------------------------------------------------------
-    else:
-        return 0
+
