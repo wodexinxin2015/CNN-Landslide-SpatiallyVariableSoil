@@ -7,6 +7,10 @@
 import os
 import numpy as np
 import torch
+from RadomField_Gene_Fuctions import solve_wii
+from RadomField_Gene_Fuctions import solve_ramdai
+from RadomField_Gene_Fuctions import solve_h_2d
+from RadomField_Gene_Fuctions import solve_h_3d
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -84,9 +88,16 @@ def random_samples_generate_kl(proj_path):  # generating random field of landsli
         # determine the range of non-boundary particles
         range_min = (np.min(parti_x, axis=0)).T  # the left and lower corner of rectangle or box
         range_max = (np.max(parti_x, axis=0)).T  # the right and upper corner of rectangle or box
+        range_min = range_min - 0.2 * (range_max - range_min)
+        range_max = range_max + 0.2 * (range_max - range_min)
+        if ndim == 2:
+            range_min[2] = 0.0
+            range_max[2] = 0.0
+        x_trans = (range_min + range_max) * 0.5
+        a_x = (range_max - range_min) * 0.5
 
     else:
-        exit(2)
+        return 2
 
 
 # ----------------------------------------------------------------------------------------------------------------------
