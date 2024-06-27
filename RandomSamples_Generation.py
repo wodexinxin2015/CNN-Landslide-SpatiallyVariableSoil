@@ -95,6 +95,37 @@ def random_samples_generate_kl(proj_path):  # generating random field of landsli
             range_max[2] = 0.0
         x_trans = (range_min + range_max) * 0.5
         a_x = (range_max - range_min) * 0.5
+        samples_num = int(input("Input the directory of input.dat: \n"))  # number of random field samples
+        covar_mat = np.zeros(2 * 2, 'f4').reshape(2, 2)
+        klterm = 200
+        if ndim == 2:
+            if randf_svf[0] == 1 and randf_svf[1] == 1:  # correlated fai and c for soil
+                # setting parameters
+                type_dist = randf_svf[0][1]
+                mean_0 = randf_svp[0][0]
+                std_0 = randf_svp[0][1]
+                mean_1 = randf_svp[1][0]
+                std_1 = randf_svp[1][1]
+                # calculate the updated correlation coefficient
+                if type_dist == 2:
+                    temp1 = randf_para[1]
+                    coe_corr = np.log(1.0 + temp1 * (std_0 / mean_0) * (std_1 / mean_1))
+                    coe_corr = coe_corr / np.sqrt(
+                        np.log(1.0 + std_0 * std_0 / mean_0 / mean_0) * np.log(1.0 + std_1 * std_1
+                                                                               / mean_1 / mean_1))
+                else:
+                    coe_corr = randf_para[1]
+                # correlation matrix C
+                covar_mat[0][0] = 1.0
+                covar_mat[0][1] = coe_corr
+                covar_mat[1][0] = 0.0
+                covar_mat[1][1] = np.sqrt(1.0 - coe_corr * coe_corr)
+
+            elif randf_svf[4] == 1 and randf_svf[5] == 1:   # correlated fai and c for fluid
+
+            else:   # generating random field for each parameter one by one
+
+        else:
 
     else:
         return 2
