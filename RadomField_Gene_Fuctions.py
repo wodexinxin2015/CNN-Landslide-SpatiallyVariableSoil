@@ -5,6 +5,8 @@
 # ----------------------------------------------------------------------------------------------------------------------
 import numpy as np
 import scipy as sp
+import torch
+import os
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -116,7 +118,7 @@ def solve_ramdai(eigval, wi, dirac_r, order_id, ndim, klterm):
 # ----------------------------------------------------------------------------------------------------------------------
 # define the function to solve h_2d
 def solve_h_2d(part_x, part_para, wi_v, eigval, uu, x_trans, order_id, randf_svf, randf_svp, soil_max, water_max,
-                parti_nonb_type, type_no, ntotal, klterm):
+               parti_nonb_type, type_no, ntotal, klterm):
     x_a = np.zeros(2, 'f4').reshape((2, 1))
     fai = np.zeros(2, 'f4').reshape((2, 1))
     eigvect = np.zeros(klterm, 'f4').reshape((klterm, 1))
@@ -192,7 +194,7 @@ def solve_h_2d(part_x, part_para, wi_v, eigval, uu, x_trans, order_id, randf_svf
 # ----------------------------------------------------------------------------------------------------------------------
 # define the function to solve h_3d
 def solve_h_3d(part_x, part_para, wi_v, eigval, uu, x_trans, order_id, randf_svf, randf_svp, soil_max, water_max,
-                parti_nonb_type, type_no, ntotal, klterm):
+               parti_nonb_type, type_no, ntotal, klterm):
     x_a = np.zeros(3, 'f4').reshape((3, 1))
     fai = np.zeros(3, 'f4').reshape((3, 1))
     eigvect = np.zeros(klterm, 'f4').reshape((klterm, 1))
@@ -267,3 +269,348 @@ def solve_h_3d(part_x, part_para, wi_v, eigval, uu, x_trans, order_id, randf_svf
             elif type_no == 5 and parti_nonb_type[i] == 1:
                 part_para[1] = np.exp(temp_mean + temp_h * temp_std)
 
+
+# ----------------------------------------------------------------------------------------------------------------------
+# define the function that writes data to *imd files
+def data_to_imd(parti_x, parti_para, dr, ndim, n_nonb, proj_path, no_file, parti_nonb_type):
+    # ------------------------------------------------------------------------------------------------------------------
+    if os.sep == "/":
+        output_txt_path = proj_path + r'/Para-' + f"{no_file:0>5}" + r'.txt'  # linux platform
+    else:
+        output_txt_path = proj_path + r'\Para-' + f"{no_file:0>5}" + r'.txt'  # windows platform
+    with open(output_txt_path, 'w') as out_txt_file:
+        out_txt_file.write(r"No.---- X----Y----Z----fai----c----cop----ds----type----matype----")
+        for pid in range(0, n_nonb):
+            out_txt_file.write(f"{pid:>9} {parti_x[pid][0]:8.6e} {parti_x[pid][1]:8.6e} {parti_x[pid][2]:8.6e} "
+                               f"{parti_para[pid][0]:8.6e} {parti_para[pid][1]:8.6e} {parti_para[pid][2]:8.6e} "
+                               f"{parti_para[pid][3]:8.6e} {parti_nonb_type[pid]:>3}   0")
+        out_txt_file.write(r"No.---- X----Y----Z----fai----c----cop----ds----type----matype----")
+    # ------------------------------------------------------------------------------------------------------------------
+    x_id = np.zeros(3, "i4").reshape((3, 1))
+    grid_dim = np.zeros(3, 'i4')
+    # calculate the grid in the rectangle that covers the landslide model and find particles in each grid
+    range_min = (np.min(parti_x, axis=0)).T  # the left and lower corner of rectangle or box
+    range_max = (np.max(parti_x, axis=0)).T  # the right and upper corner of rectangle or box
+
+    grid_dim[0] = int((range_max[0] - range_min[0]) / dr) + 1
+    grid_dim[1] = int((range_max[1] - range_min[1]) / dr) + 1
+    grid_dim[2] = int((range_max[2] - range_min[2]) / dr) + 1
+
+    grid_para = np.zeros(grid_dim[0] * grid_dim[1] * grid_dim[2] * 4, 'f4').reshape(
+        (grid_dim[0] * grid_dim[1] * grid_dim[2], 4))
+
+    cell_num = grid_dim[0] * grid_dim[1] * grid_dim[2]
+    for part_id in range(0, n_nonb):  # calculate grid_id for each particle
+        x_id[0] = int((parti_x[part_id][0] - range_min[0]) / dr + 0.2)
+        x_id[1] = int((parti_x[part_id][1] - range_min[1]) / dr + 0.2)
+        x_id[2] = int((parti_x[part_id][2] - range_min[2]) / dr + 0.2)
+        if ndim == 2:
+            grid_id = x_id[1] * grid_dim[0] + x_id[0]
+        else:
+            grid_id = x_id[0] * grid_dim[2] * grid_dim[1] + x_id[2] * grid_dim[1] + x_id[1]
+
+        if 0 <= grid_id < cell_num:
+            grid_para[grid_id] = parti_para[part_id]
+    # ----------------------------------------------------------------------------------------------------------
+    # out put to results file with designated name
+    if ndim == 2:
+        feat_ten = torch.from_numpy(grid_para.reshape((4, grid_dim[0], grid_dim[1])))
+    else:
+        feat_ten = torch.from_numpy(grid_para.reshape((4 * grid_dim[0], grid_dim[1], grid_dim[2])))
+    if os.sep == "/":  # linux platform
+        file_feature_out = proj_path + r'/features-' + f"{no_file:0>4}" + r'.imd'
+    else:  # Windows platform
+        file_feature_out = proj_path + r'\\features-' + f"{no_file:0>4}" + r'.imd'
+    torch.save(feat_ten, file_feature_out)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# define the K-L expansion procedure of correlated friction angle and cohesion
+def kl_corr_cfai(parti_x, parti_para, a_x, x_trans, range_max, randf_para, randf_svf, randf_svp, klterm, samples_num,
+                 para_no, n_nonb, parti_nonb_type, ndim, dr, proj_path):
+    rl_val = np.zeros(3, 'f4').reshape(3, 1)
+    covar_mat = np.zeros(2 * 2, 'f4').reshape(2, 2)
+    order_id = np.zeros(klterm * 3, 'f4').reshape(klterm, 3)
+    wi_v = np.zeros(klterm * 3, 'f4').reshape(klterm, 3)
+    eigval = np.zeros(klterm, 'f4').reshape(klterm, 1)
+    uu = np.zeros(klterm, 'f4').reshape(klterm, 1)
+    # setting parameters
+    type_dist = randf_svf[para_no][1]
+    mean_0 = randf_svp[para_no][0]
+    std_0 = randf_svp[para_no][1]
+    mean_1 = randf_svp[para_no + 1][0]
+    std_1 = randf_svp[para_no + 1][1]
+    # calculate the updated correlation coefficient
+    if type_dist == 2:
+        temp1 = randf_para[1]
+        coe_corr = np.log(1.0 + temp1 * (std_0 / mean_0) * (std_1 / mean_1))
+        coe_corr = coe_corr / np.sqrt(
+            np.log(1.0 + std_0 * std_0 / mean_0 / mean_0) * np.log(1.0 + std_1 * std_1
+                                                                   / mean_1 / mean_1))
+    else:
+        coe_corr = randf_para[1]
+    # correlation matrix C
+    covar_mat[0][0] = 1.0
+    covar_mat[0][1] = coe_corr
+    covar_mat[para_no + 1][0] = 0.0
+    covar_mat[1][1] = np.sqrt(1.0 - coe_corr * coe_corr)
+    if ndim == 2:
+        for step_s in range(0, samples_num):
+            # generate random variables of standard normal distribution
+            uu_cfai = np.random.randn(klterm, 2)
+            # calculate the correlated random variables of standard normal distribution
+            zeta = uu_cfai @ covar_mat
+            # solve H-2D for friction angle of soil
+            # calculate wi_v
+            rl_val[0] = randf_svp[para_no][2]
+            rl_val[1] = randf_svp[para_no][3]
+            solve_wii(wi_v, a_x, rl_val, ndim, klterm)
+            # calculate ramda
+            solve_ramdai(eigval, wi_v, rl_val, order_id, ndim, klterm)
+            uu[:] = zeta[:][0]
+            solve_h_2d(parti_x, parti_para, wi_v, eigval, uu, x_trans, order_id, randf_svf,
+                       randf_svp[0], range_max[1], range_max[1], parti_nonb_type, para_no, n_nonb, klterm)
+            # solve H-2D for cohesion of soil
+            # calculate wi_v
+            rl_val[0] = randf_svp[1][2]
+            rl_val[1] = randf_svp[1][3]
+            solve_wii(wi_v, a_x, rl_val, ndim, klterm)
+            # calculate ramda
+            solve_ramdai(eigval, wi_v, rl_val, order_id, ndim, klterm)
+            uu[:] = zeta[:][1]
+            solve_h_2d(parti_x, parti_para, wi_v, eigval, uu, x_trans, order_id, randf_svf,
+                       randf_svp[0], range_max[1], range_max[1], parti_nonb_type, para_no, n_nonb, klterm)
+            # output to files
+            data_to_imd(parti_x, parti_para, dr, ndim, n_nonb, proj_path, step_s, parti_nonb_type)
+    else:
+        for step_s in range(0, samples_num):
+            # generate random variables of standard normal distribution
+            uu_cfai = np.random.randn(klterm, 2)
+            # calculate the correlated random variables of standard normal distribution
+            zeta = uu_cfai @ covar_mat
+            # solve H-2D for friction angle of soil
+            # calculate wi_v
+            rl_val[0] = randf_svp[para_no][2]
+            rl_val[1] = randf_svp[para_no][3]
+            rl_val[2] = randf_svp[para_no][4]
+            solve_wii(wi_v, a_x, rl_val, ndim, klterm)
+            # calculate ramda
+            solve_ramdai(eigval, wi_v, rl_val, order_id, ndim, klterm)
+            uu[:] = zeta[:][0]
+            solve_h_3d(parti_x, parti_para, wi_v, eigval, uu, x_trans, order_id, randf_svf,
+                       randf_svp[0], range_max[2], range_max[2], parti_nonb_type, para_no, n_nonb, klterm)
+            # solve H-2D for cohesion of soil
+            # calculate wi_v
+            rl_val[0] = randf_svp[para_no + 1][2]
+            rl_val[1] = randf_svp[para_no + 1][3]
+            rl_val[2] = randf_svp[para_no + 1][4]
+            solve_wii(wi_v, a_x, rl_val, ndim, klterm)
+            # calculate ramda
+            solve_ramdai(eigval, wi_v, rl_val, order_id, ndim, klterm)
+            uu[:] = zeta[:][1]
+            solve_h_3d(parti_x, parti_para, wi_v, eigval, uu, x_trans, order_id, randf_svf,
+                       randf_svp[0], range_max[2], range_max[2], parti_nonb_type, para_no, n_nonb, klterm)
+            # output to files
+            data_to_imd(parti_x, parti_para, dr, ndim, n_nonb, proj_path, step_s, parti_nonb_type)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# define the ordinary K-L expansion procedure
+def kl_nocorr_cfai(parti_x, parti_para, a_x, x_trans, range_max, randf_para, randf_svf, randf_svp, klterm, samples_num,
+                   n_nonb, parti_nonb_type, ndim, dr, proj_path):
+    rl_val = np.zeros(3, 'f4').reshape(3, 1)
+    order_id = np.zeros(klterm * 3, 'f4').reshape(klterm, 3)
+    wi_v = np.zeros(klterm * 3, 'f4').reshape(klterm, 3)
+    eigval = np.zeros(klterm, 'f4').reshape(klterm, 1)
+    if ndim == 2:
+        for step_s in range(0, samples_num):
+            for para_no in range(0, 6):
+                # generate random variables of standard normal distribution
+                uu = np.random.randn(klterm, 1)
+                # solve H-2D for friction angle of soil
+                # calculate wi_v
+                rl_val[0] = randf_svp[para_no][2]
+                rl_val[1] = randf_svp[para_no][3]
+                solve_wii(wi_v, a_x, rl_val, ndim, klterm)
+                # calculate ramda
+                solve_ramdai(eigval, wi_v, rl_val, order_id, ndim, klterm)
+                solve_h_2d(parti_x, parti_para, wi_v, eigval, uu, x_trans, order_id, randf_svf,
+                           randf_svp[0], range_max[1], range_max[1], parti_nonb_type, para_no, n_nonb, klterm)
+                # output to files
+                data_to_imd(parti_x, parti_para, dr, ndim, n_nonb, proj_path, step_s, parti_nonb_type)
+    else:
+        for step_s in range(0, samples_num):
+            for para_no in range(0, 6):
+                # generate random variables of standard normal distribution
+                uu = np.random.randn(klterm, 1)
+                # solve H-2D for friction angle of soil
+                # calculate wi_v
+                rl_val[0] = randf_svp[para_no][2]
+                rl_val[1] = randf_svp[para_no][3]
+                rl_val[2] = randf_svp[para_no][4]
+                solve_wii(wi_v, a_x, rl_val, ndim, klterm)
+                # calculate ramda
+                solve_ramdai(eigval, wi_v, rl_val, order_id, ndim, klterm)
+                solve_h_3d(parti_x, parti_para, wi_v, eigval, uu, x_trans, order_id, randf_svf,
+                           randf_svp[0], range_max[2], range_max[2], parti_nonb_type, para_no, n_nonb, klterm)
+                # output to files
+                data_to_imd(parti_x, parti_para, dr, ndim, n_nonb, proj_path, step_s, parti_nonb_type)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# define the function to determine the coordinates of cells
+def cell_coordinates(x_cell, x_base, cell_dr, grid_dim, cell_total, ndim):
+    for k in range(0, cell_total):
+        if ndim == 2:
+            np_x = k % grid_dim[0]
+            np_y = int(k / grid_dim[0])
+            x_cell[k][0] = x_base[0] + (float(np_x) + 0.5) * cell_dr
+            x_cell[k][1] = x_base[1] + (float(np_y) + 0.5) * cell_dr
+        else:
+            np_z = int(k / (grid_dim[0] * grid_dim[1]))
+            np_y = int((k % (grid_dim[0] * grid_dim[1])) / grid_dim[0])
+            np_x = (k % (grid_dim[0] * grid_dim[1])) % grid_dim[0]
+            x_cell[k][0] = x_base[0] + (float(np_x) + 0.5) * cell_dr
+            x_cell[k][1] = x_base[1] + (float(np_y) + 0.5) * cell_dr
+            x_cell[k][2] = x_base[2] + (float(np_z) + 0.5) * cell_dr
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# sparse matrix: storing the auto correlation function value
+def auto_correlation_matrix(randf_svp, randf_para, x_cell, cell_dr, cell_total, ndim):
+    lx = randf_svp[4]
+    ly = randf_svp[5]
+    lz = randf_svp[6]
+    # sparse matrix for auto correlation matrix
+    n_interv = int(np.max(randf_svp[4:6]) / cell_dr)
+    n_e_dim = 2 * n_interv + 1
+    n_size = np.pow(n_e_dim, ndim)
+    row_arr = -np.ones(n_size * cell_total).reshape(n_size * cell_total, 1)  # row number of non zeros
+    col_arr = -np.ones(n_size * cell_total).reshape(n_size * cell_total, 1)  # column number of non zeros
+    acf_arr = -np.zeros(n_size * cell_total).reshape(n_size * cell_total, 1)  # value of acf
+    # calculate the element value of auto correlation matrx
+    sp_arr_idx = 0
+    for i in range(0, cell_total):
+        for j in range(0, cell_total):
+            dx = np.abs(x_cell[i] - x_cell[j])
+            if randf_para[2] == 1:
+                acf = np.exp(-2.0 * (dx[0] / lx + dx[1] / ly + dx[2] / lz))
+            else:
+                acf = np.exp(
+                    -np.pi * (np.pow(dx[0] / lx, 2) + np.pow(dx[1] / ly, 2) + np.pow(dx[2] / lz, 2)))
+            if np.abs(acf) > 0.02:
+                row_arr[sp_arr_idx] = i
+                col_arr[sp_arr_idx] = j
+                acf_arr[sp_arr_idx] = acf
+                sp_arr_idx = sp_arr_idx + 1
+    row_arr_1 = np.resize(row_arr, (sp_arr_idx, 1))
+    col_arr_1 = np.resize(col_arr, (sp_arr_idx, 1))
+    acf_arr_1 = np.resize(acf_arr, (sp_arr_idx, 1))
+    mat_corr = sp.sparse.csr_matrix((acf_arr_1, (row_arr_1, col_arr_1)), shape=(cell_total, cell_total)).toarray()
+    return mat_corr
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# define the function of correlated random field generation in MidPoint method
+def corr_random_field_midp(para_no, randf_para, randf_svf, randf_svp, range_max, x_cell, cell_total, mat_corr_l_1,
+                           mat_corr_l_2, grid_para, ndim):
+    # setting parameters
+    type_dist = randf_svf[para_no][1]
+    mean_0 = randf_svp[para_no][0]
+    std_0 = randf_svp[para_no][1]
+    mean_1 = randf_svp[para_no + 1][0]
+    std_1 = randf_svp[para_no + 1][1]
+    coe_depth = randf_svp[para_no][5]
+    # calculate the updated correlation coefficient
+    if type_dist == 2:
+        temp1 = randf_para[1]
+        coe_corr = np.log(1.0 + temp1 * (std_0 / mean_0) * (std_1 / mean_1))
+        coe_corr = coe_corr / np.sqrt(
+            np.log(1.0 + std_0 * std_0 / mean_0 / mean_0) * np.log(1.0 + std_1 * std_1
+                                                                   / mean_1 / mean_1))
+    else:
+        coe_corr = randf_para[1]
+    # correlation matrix C
+    covar_mat = np.zeros(2 * 2, 'f4').reshape(2, 2)
+    covar_mat[0][0] = 1.0
+    covar_mat[0][1] = coe_corr
+    covar_mat[1][0] = 0.0
+    covar_mat[1][1] = np.sqrt(1.0 - coe_corr * coe_corr)
+    # generating standard normal distributed variables (cell_total * 2)
+    zeta_rnd = np.random.randn(cell_total, 2)
+    zeta_corr_1 = np.zeros(cell_total, 'f4').reshape(cell_total, 1)
+    zeta_corr_2 = np.zeros(cell_total, 'f4').reshape(cell_total, 1)
+    zeta_rnd_temp = zeta_rnd @ covar_mat
+    for id_cell in range(0, cell_total):
+        zeta_corr_1[id_cell] = zeta_rnd_temp[id_cell][0]
+        zeta_corr_2[id_cell] = zeta_rnd_temp[id_cell][1]
+    vec_e_1 = sp.sparse.csr_matrix.multiply(mat_corr_l_1, zeta_corr_1).toarray()
+    vec_e_2 = sp.sparse.csr_matrix.multiply(mat_corr_l_2, zeta_corr_2).toarray()
+    # generating random field for cells
+    mean_value = np.zeros(2, 'f4')
+    std_value = np.zeros(2, 'f4')
+    if type_dist == 1:  # normal distribution
+        for k in range(0, cell_total):
+            if ndim == 2:
+                mean_value[0] = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                mean_value[1] = mean_1 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+            else:
+                mean_value[0] = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+                mean_value[1] = mean_1 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+            grid_para[k][0] = mean_value[0] + std_0 * vec_e_1[k]
+            grid_para[k][1] = mean_value[1] + std_1 * vec_e_2[k]
+            grid_para[k][3] = 1.0
+    else:  # log normal distribution
+        for k in range(0, cell_total):
+            if ndim == 2:
+                mean_value[0] = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+                mean_value[1] = mean_1 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+            else:
+                mean_value[0] = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+                mean_value[1] = mean_1 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+            std_value[0] = np.sqrt(np.log(1.0 + (std_0 / mean_value[0]) * (std_0 / mean_value[0])))
+            std_value[1] = np.sqrt(np.log(1.0 + (std_1 / mean_value[1]) * (std_1 / mean_value[1])))
+            mean_value[0] = np.log(mean_value[0]) - 0.5 * std_value[0] * std_value[0]
+            mean_value[1] = np.log(mean_value[1]) - 0.5 * std_value[1] * std_value[1]
+            grid_para[k][0] = np.exp(mean_value[0] + std_value[0] * vec_e_1[k])
+            grid_para[k][1] = np.exp(mean_value[1] + std_value[1] * vec_e_2[k])
+            grid_para[k][3] = 1.0
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# define the function of one-by-one random field generation in MidPoint method
+def non_random_field_midp(para_no, randf_para, randf_svf, randf_svp, range_max, x_cell, cell_total, mat_corr_l_1,
+                          grid_para, ndim):
+    # setting parameters
+    type_dist = randf_svf[para_no][1]
+    mean_0 = randf_svp[para_no][0]
+    std_0 = randf_svp[para_no][1]
+    coe_depth = randf_svp[para_no][5]
+    # generating standard normal distributed variables (cell_total * 2)
+    zeta_rnd = np.random.randn(cell_total, 1)
+    vec_e_1 = sp.sparse.csr_matrix.multiply(mat_corr_l_1, zeta_rnd).toarray()
+    # generating random field for cells
+    if type_dist == 1:  # normal distribution
+        for k in range(0, cell_total):
+            if ndim == 2:
+                mean_value = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+            else:
+                mean_value = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+            if para_no < 4:
+                grid_para[k][para_no] = mean_value + std_0 * vec_e_1[k]
+            else:
+                grid_para[k][para_no - 4] = mean_value + std_0 * vec_e_1[k]
+            grid_para[k][3] = 1.0
+    else:  # log normal distribution
+        for k in range(0, cell_total):
+            if ndim == 2:
+                mean_value = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
+            else:
+                mean_value = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
+            std_value = np.sqrt(np.log(1.0 + (std_0 / mean_value) * (std_0 / mean_value)))
+            mean_value = np.log(mean_value) - 0.5 * std_value * std_value
+            if para_no < 4:
+                grid_para[k][para_no] = np.exp(mean_value + std_value * vec_e_1[k])
+            else:
+                grid_para[k][para_no - 4] = np.exp(mean_value + std_value * vec_e_1[k])
+            grid_para[k][3] = 1.0

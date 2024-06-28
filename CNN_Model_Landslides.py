@@ -22,7 +22,7 @@ from CNN_Model_Functions import cross_validation_function
 # while loop
 check = True
 while check:
-    # ----------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
     # the running mode: 1--converting particle data to *.imd files; 2--generating random samples of landslide; 3--cross
     # validation of hyperparameters;4--train and test of CNN model for landslides;5--prediction using trained CNN model
     print("Input the type of running mode:")
@@ -32,7 +32,7 @@ while check:
     print(" 4--train and test of CNN model for landslides;")
     print(" 5--prediction using trained CNN model.")
     type_mode = int(input())
-    # ----------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
     # running of each subroutine
     if type_mode == 1:
         particle_to_images()   # 1--converting particle data to *.imd files;
