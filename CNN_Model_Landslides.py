@@ -42,9 +42,9 @@ while check:
         # input the type of random field generating method
         gen_type = int(input("Input the type of random field generating method:1--KL expansion;2--Mid-point method \n"))
         if gen_type == 1:
-            random_samples_generate_kl(proj_path)   # 2--generating random samples of landslide using KL expansion
+            random_samples_generate_kl(proj_path)   # 1--generating random samples of landslide using KL expansion
         elif gen_type == 2:
-            random_samples_generate_midp(proj_path)   # 2--generating random samples of landslide using KL expansion
+            random_samples_generate_midp(proj_path)   # 2--generating random samples of landslide using midpoint method
         else:
             print("Incorrect type of random field generating method.")
     elif type_mode == 3:

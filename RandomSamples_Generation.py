@@ -110,16 +110,16 @@ def random_samples_generate_kl(proj_path):  # generating random field of landsli
             range_max[2] = 0.0
         x_trans = (range_min + range_max) * 0.5
         a_x = (range_max - range_min) * 0.5
-        samples_num = int(input("Input the directory of input.dat: \n"))  # number of random field samples
+        samples_num = int(input("Input the number of random field sample: \n"))  # number of random field samples
         klterm = 200
-        if randf_svf[0] == 1 and randf_svf[1] == 1:  # correlated fai and c for soil
+        if randf_flag[0] == 1 and randf_flag[1] == 1:  # correlated fai and c for soil
             kl_corr_cfai(parti_x, parti_para, a_x, x_trans, range_max, randf_para,randf_svf, randf_svp, klterm,
                          samples_num, 0, n_nonb, parti_nonb_type, ndim, dr, proj_path)
-        elif randf_svf[4] == 1 and randf_svf[5] == 1:   # correlated fai and c for fluid
+        elif randf_flag[4] == 1 and randf_flag[5] == 1:   # correlated fai and c for fluid
             kl_corr_cfai(parti_x, parti_para, a_x, x_trans, range_max, randf_para, randf_svf, randf_svp, klterm,
                          samples_num, 4, n_nonb, parti_nonb_type, ndim, dr, proj_path)
         else:   # generating random field for each parameter one by one
-            kl_nocorr_cfai(parti_x, parti_para, a_x, x_trans, range_max, randf_para, randf_svf, randf_svp, klterm,
+            kl_nocorr_cfai(parti_x, parti_para, a_x, x_trans, range_max, randf_flag, randf_svf, randf_svp, klterm,
                          samples_num, n_nonb, parti_nonb_type, ndim, dr, proj_path)
     else:
         return 2
@@ -239,7 +239,7 @@ def random_samples_generate_midp(proj_path):  # generating random field of lands
             mat_corr_cf = auto_correlation_matrix(randf_svp[5], randf_para, x_cell, cell_dr, cell_total, ndim)
             mat_corr_cf_l = sparse_cholesky(mat_corr_cf)
         # loop for the number of random fields
-        samples_num = int(input("Input the directory of input.dat: \n"))  # number of random field samples
+        samples_num = int(input("Input the number of random field sample: \n"))  # number of random field samples
         for steps in range(0, samples_num):
             if randf_flag[0] == 1 and randf_flag[1] == 1:  # correlated strength parameters for soil
                 corr_random_field_midp(0, randf_para, randf_svf, randf_svp, range_max, x_cell, cell_total,
