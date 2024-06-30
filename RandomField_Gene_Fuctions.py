@@ -95,7 +95,7 @@ def solve_ramdai(eigval, wi, dirac_r, order_id, ndim, klterm):
                         order_id[i][1] = n
             m = order_id[i][0]
             n = order_id[i][1]
-            eigval_2d[m][n] = 0.0
+            eigval_2d[m][n] = -1.0
     else:
         # calculate the value of eigval_3d
         eigval_3d = np.zeros(klterm * klterm * klterm, 'f4').reshape((klterm, klterm, klterm))
@@ -117,7 +117,7 @@ def solve_ramdai(eigval, wi, dirac_r, order_id, ndim, klterm):
             m = order_id[i][0]
             n = order_id[i][1]
             k = order_id[i][2]
-            eigval_3d[m][n][k] = 0.0
+            eigval_3d[m][n][k] = -1.0
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -136,7 +136,7 @@ def solve_h_2d(part_x, part_para, wi_v, eigval, uu, x_trans, order_id, randf_svf
             idx = order_id[j][0]
             idy = order_id[j][1]
             fai[0] = equation_faii(x_a[0], randf_svp[2], wi_v[idx][0], idx)
-            fai[1] = equation_faii(x_a[1], randf_svp[3], wi_v[idx][1], idy)
+            fai[1] = equation_faii(x_a[1], randf_svp[3], wi_v[idy][1], idy)
             eigvect[j] = fai[0] * fai[1]
         # solve H value
         cof_dep = randf_svp[5]
@@ -213,8 +213,8 @@ def solve_h_3d(part_x, part_para, wi_v, eigval, uu, x_trans, order_id, randf_svf
             idy = order_id[j][1]
             idz = order_id[j][2]
             fai[0] = equation_faii(x_a[0], randf_svp[2], wi_v[idx][0], idx)
-            fai[1] = equation_faii(x_a[1], randf_svp[3], wi_v[idx][1], idy)
-            fai[2] = equation_faii(x_a[2], randf_svp[4], wi_v[idx][2], idz)
+            fai[1] = equation_faii(x_a[1], randf_svp[3], wi_v[idy][1], idy)
+            fai[2] = equation_faii(x_a[2], randf_svp[4], wi_v[idz][2], idz)
             eigvect[j] = fai[0] * fai[1] * fai[2]
         # solve H value
         cof_dep = randf_svp[5]

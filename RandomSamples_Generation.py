@@ -95,7 +95,7 @@ def random_samples_generate_kl(proj_path):  # generating random field of landsli
         x_trans = (range_min + range_max) * 0.5
         a_x = (range_max - range_min) * 0.5
         samples_num = int(input("Input the number of random field sample: \n"))  # number of random field samples
-        klterm = 200
+        klterm = 150
         if randf_flag[0] == 1 and randf_flag[1] == 1:  # correlated fai and c for soil
             kl_corr_cfai(parti_x, parti_para, a_x, x_trans, range_max, randf_para, randf_svf, randf_svp, klterm,
                          samples_num, 0, n_nonb, parti_nonb_type, ndim, dr, proj_path)
