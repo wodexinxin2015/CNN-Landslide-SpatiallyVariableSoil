@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------------------------------------------------
-# RadomField_Gene_Fuctions.py
+# RandomField_Gene_Fuctions.py
 # - functions used in the genrating process of landslide random fields
 # -Coded by Prof. Weijie Zhang, GeoHohai, Hohai University, Nanjing, China
 # ----------------------------------------------------------------------------------------------------------------------
@@ -174,7 +174,6 @@ def solve_h_2d(part_x, part_para, wi_v, eigval, uu, x_trans, order_id, randf_svf
                 temp_mean = randf_svp[0] + (water_max - part_x[i][1]) * cof_dep
             else:
                 temp_mean = randf_svp[0]
-            temp_std = randf_svp[1]
             temp_std = np.sqrt(np.log(1.0 + (randf_svp[1] / temp_mean) * (randf_svp[1] / temp_mean)))
             temp_mean = np.log(temp_mean) - 0.5 * temp_std * temp_std
             # solve H
@@ -253,7 +252,6 @@ def solve_h_3d(part_x, part_para, wi_v, eigval, uu, x_trans, order_id, randf_svf
                 temp_mean = randf_svp[0] + (water_max - part_x[i][2]) * cof_dep
             else:
                 temp_mean = randf_svp[0]
-            temp_std = randf_svp[1]
             temp_std = np.sqrt(np.log(1.0 + (randf_svp[1] / temp_mean) * (randf_svp[1] / temp_mean)))
             temp_mean = np.log(temp_mean) - 0.5 * temp_std * temp_std
             # solve H
@@ -286,14 +284,14 @@ def data_to_imd(parti_x, parti_para, dr, ndim, n_nonb, proj_path, no_file, parti
     with open(output_txt_path, 'w') as out_txt_file:
         out_txt_file.write(r"No.---- X----Y----Z----fai----c----cop----ds----type----matype---- \n")
         for pid in range(0, n_nonb):
-            out_txt_file.write("%9d %.6e %.6e %.6e %.6e %.6e %.6e %.6e %3d  0\n" %(pid, parti_x[pid][0],
-                                                                                   parti_x[pid][1],
-                                                                                   parti_x[pid][2],
-                                                                                   parti_para[pid][0],
-                                                                                   parti_para[pid][1],
-                                                                                   parti_para[pid][2],
-                                                                                   parti_para[pid][3],
-                                                                                   parti_nonb_type[pid]))
+            out_txt_file.write("%9d %.6e %.6e %.6e %.6e %.6e %.6e %.6e %3d  0\n" % (pid, parti_x[pid][0],
+                                                                                    parti_x[pid][1],
+                                                                                    parti_x[pid][2],
+                                                                                    parti_para[pid][0],
+                                                                                    parti_para[pid][1],
+                                                                                    parti_para[pid][2],
+                                                                                    parti_para[pid][3],
+                                                                                    parti_nonb_type[pid]))
         out_txt_file.write(r"No.---- X----Y----Z----fai----c----cop----ds----type----matype----\n")
     # ------------------------------------------------------------------------------------------------------------------
     x_id = np.zeros(3, "i4").reshape((3, 1))
@@ -419,7 +417,7 @@ def kl_corr_cfai(parti_x, parti_para, a_x, x_trans, range_max, randf_para, randf
             solve_ramdai(eigval, wi_v, rl_val, order_id, ndim, klterm)
             uu[:] = zeta[:][1]
             solve_h_3d(parti_x, parti_para, wi_v, eigval, uu, x_trans, order_id, randf_svf[para_no + 1],
-                       randf_svp[para_no + 1],  range_max[2], range_max[2], parti_nonb_type, para_no, n_nonb, klterm)
+                       randf_svp[para_no + 1], range_max[2], range_max[2], parti_nonb_type, para_no, n_nonb, klterm)
             # output to files
             data_to_imd(parti_x, parti_para, dr, ndim, n_nonb, proj_path, step_s, parti_nonb_type)
 
@@ -468,161 +466,3 @@ def kl_nocorr_cfai(parti_x, parti_para, a_x, x_trans, range_max, randf_flag, ran
             # output to files
             data_to_imd(parti_x, parti_para, dr, ndim, n_nonb, proj_path, step_s, parti_nonb_type)
 
-
-# ----------------------------------------------------------------------------------------------------------------------
-# define the function to determine the coordinates of cells
-def cell_coordinates(x_cell, x_base, cell_dr, grid_dim, cell_total, ndim):
-    for k in range(0, cell_total):
-        if ndim == 2:
-            np_x = k % grid_dim[0]
-            np_y = int(k / grid_dim[0])
-            x_cell[k][0] = x_base[0] + (float(np_x) + 0.5) * cell_dr
-            x_cell[k][1] = x_base[1] + (float(np_y) + 0.5) * cell_dr
-        else:
-            np_z = int(k / (grid_dim[0] * grid_dim[1]))
-            np_y = int((k % (grid_dim[0] * grid_dim[1])) / grid_dim[0])
-            np_x = (k % (grid_dim[0] * grid_dim[1])) % grid_dim[0]
-            x_cell[k][0] = x_base[0] + (float(np_x) + 0.5) * cell_dr
-            x_cell[k][1] = x_base[1] + (float(np_y) + 0.5) * cell_dr
-            x_cell[k][2] = x_base[2] + (float(np_z) + 0.5) * cell_dr
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# sparse matrix: storing the auto correlation function value
-def auto_correlation_matrix(randf_svp, randf_para, x_cell, cell_dr, cell_total, ndim):
-    lx = randf_svp[2]
-    ly = randf_svp[3]
-    lz = randf_svp[4]
-    # sparse matrix for auto correlation matrix
-    n_interv = int(np.max(randf_svp[2:5]) / cell_dr)
-    n_e_dim = 2 * n_interv + 1
-    n_size = np.power(n_e_dim, ndim)
-    row_arr = -np.ones(n_size * cell_total).reshape(n_size * cell_total, 1)  # row number of non zeros
-    col_arr = -np.ones(n_size * cell_total).reshape(n_size * cell_total, 1)  # column number of non zeros
-    acf_arr = -np.zeros(n_size * cell_total).reshape(n_size * cell_total, 1)  # value of acf
-    # calculate the element value of auto correlation matrx
-    sp_arr_idx = 0
-    for i in range(0, cell_total):
-        for j in range(0, cell_total):
-            dx = np.abs(x_cell[i] - x_cell[j])
-            if randf_para[2] == 1:
-                acf = np.exp(-2.0 * (dx[0] / lx + dx[1] / ly + dx[2] / lz))
-            else:
-                acf = np.exp(
-                    -np.pi * (np.power(dx[0] / lx, 2) + np.power(dx[1] / ly, 2) + np.power(dx[2] / lz, 2)))
-            if np.abs(acf) > 0.02:
-                row_arr[sp_arr_idx] = i
-                col_arr[sp_arr_idx] = j
-                acf_arr[sp_arr_idx] = acf
-                sp_arr_idx = sp_arr_idx + 1
-    row_arr_1 = np.resize(row_arr, (sp_arr_idx, 1))
-    col_arr_1 = np.resize(col_arr, (sp_arr_idx, 1))
-    acf_arr_1 = np.resize(acf_arr, (sp_arr_idx, 1))
-    mat_corr = sp.sparse.csr_matrix((acf_arr_1, (row_arr_1, col_arr_1)), shape=(cell_total, cell_total)).toarray()
-    return mat_corr
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# define the function of correlated random field generation in MidPoint method
-def corr_random_field_midp(para_no, randf_para, randf_svf, randf_svp, range_max, x_cell, cell_total, mat_corr_l_1,
-                           mat_corr_l_2, grid_para, ndim):
-    # setting parameters
-    type_dist = randf_svf[para_no][1]
-    mean_0 = randf_svp[para_no][0]
-    std_0 = randf_svp[para_no][1]
-    mean_1 = randf_svp[para_no + 1][0]
-    std_1 = randf_svp[para_no + 1][1]
-    coe_depth = randf_svp[para_no][5]
-    # calculate the updated correlation coefficient
-    if type_dist == 2:
-        temp1 = randf_para[1]
-        coe_corr = np.log(1.0 + temp1 * (std_0 / mean_0) * (std_1 / mean_1))
-        coe_corr = coe_corr / np.sqrt(
-            np.log(1.0 + std_0 * std_0 / mean_0 / mean_0) * np.log(1.0 + std_1 * std_1
-                                                                   / mean_1 / mean_1))
-    else:
-        coe_corr = randf_para[1]
-    # correlation matrix C
-    covar_mat = np.zeros(2 * 2, 'f4').reshape(2, 2)
-    covar_mat[0][0] = 1.0
-    covar_mat[0][1] = coe_corr
-    covar_mat[1][0] = 0.0
-    covar_mat[1][1] = np.sqrt(1.0 - coe_corr * coe_corr)
-    # generating standard normal distributed variables (cell_total * 2)
-    zeta_rnd = np.random.randn(cell_total, 2)
-    zeta_corr_1 = np.zeros(cell_total, 'f4').reshape(cell_total, 1)
-    zeta_corr_2 = np.zeros(cell_total, 'f4').reshape(cell_total, 1)
-    zeta_rnd_temp = zeta_rnd @ covar_mat
-    for id_cell in range(0, cell_total):
-        zeta_corr_1[id_cell] = zeta_rnd_temp[id_cell][0]
-        zeta_corr_2[id_cell] = zeta_rnd_temp[id_cell][1]
-    vec_e_1 = sp.sparse.csr_matrix.multiply(mat_corr_l_1, zeta_corr_1).toarray()
-    vec_e_2 = sp.sparse.csr_matrix.multiply(mat_corr_l_2, zeta_corr_2).toarray()
-    # generating random field for cells
-    mean_value = np.zeros(2, 'f4')
-    std_value = np.zeros(2, 'f4')
-    if type_dist == 1:  # normal distribution
-        for k in range(0, cell_total):
-            if ndim == 2:
-                mean_value[0] = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
-                mean_value[1] = mean_1 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
-            else:
-                mean_value[0] = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
-                mean_value[1] = mean_1 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
-            grid_para[k][0] = mean_value[0] + std_0 * vec_e_1[k]
-            grid_para[k][1] = mean_value[1] + std_1 * vec_e_2[k]
-            grid_para[k][3] = 1.0
-    else:  # log normal distribution
-        for k in range(0, cell_total):
-            if ndim == 2:
-                mean_value[0] = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
-                mean_value[1] = mean_1 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
-            else:
-                mean_value[0] = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
-                mean_value[1] = mean_1 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
-            std_value[0] = np.sqrt(np.log(1.0 + (std_0 / mean_value[0]) * (std_0 / mean_value[0])))
-            std_value[1] = np.sqrt(np.log(1.0 + (std_1 / mean_value[1]) * (std_1 / mean_value[1])))
-            mean_value[0] = np.log(mean_value[0]) - 0.5 * std_value[0] * std_value[0]
-            mean_value[1] = np.log(mean_value[1]) - 0.5 * std_value[1] * std_value[1]
-            grid_para[k][0] = np.exp(mean_value[0] + std_value[0] * vec_e_1[k])
-            grid_para[k][1] = np.exp(mean_value[1] + std_value[1] * vec_e_2[k])
-            grid_para[k][3] = 1.0
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# define the function of one-by-one random field generation in MidPoint method
-def non_random_field_midp(para_no, randf_para, randf_svf, randf_svp, range_max, x_cell, cell_total, mat_corr_l_1,
-                          grid_para, ndim):
-    # setting parameters
-    type_dist = randf_svf[para_no][1]
-    mean_0 = randf_svp[para_no][0]
-    std_0 = randf_svp[para_no][1]
-    coe_depth = randf_svp[para_no][5]
-    # generating standard normal distributed variables (cell_total * 2)
-    zeta_rnd = np.random.randn(cell_total, 1)
-    vec_e_1 = sp.sparse.csr_matrix.multiply(mat_corr_l_1, zeta_rnd).toarray()
-    # generating random field for cells
-    if type_dist == 1:  # normal distribution
-        for k in range(0, cell_total):
-            if ndim == 2:
-                mean_value = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
-            else:
-                mean_value = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
-            if para_no < 4:
-                grid_para[k][para_no] = mean_value + std_0 * vec_e_1[k]
-            else:
-                grid_para[k][para_no - 4] = mean_value + std_0 * vec_e_1[k]
-            grid_para[k][3] = 1.0
-    else:  # log normal distribution
-        for k in range(0, cell_total):
-            if ndim == 2:
-                mean_value = mean_0 + coe_depth * np.abs(range_max[1] - x_cell[k][1])
-            else:
-                mean_value = mean_0 + coe_depth * np.abs(range_max[2] - x_cell[k][2])
-            std_value = np.sqrt(np.log(1.0 + (std_0 / mean_value) * (std_0 / mean_value)))
-            mean_value = np.log(mean_value) - 0.5 * std_value * std_value
-            if para_no < 4:
-                grid_para[k][para_no] = np.exp(mean_value + std_value * vec_e_1[k])
-            else:
-                grid_para[k][para_no - 4] = np.exp(mean_value + std_value * vec_e_1[k])
-            grid_para[k][3] = 1.0
