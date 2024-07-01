@@ -6,9 +6,8 @@
 # ----------------------------------------------------------------------------------------------------------------------
 import os
 import numpy as np
-import scipy as sp
-from RandomField_Gene_Fuctions import kl_corr_cfai
-from RandomField_Gene_Fuctions import kl_nocorr_cfai
+from RandomField_Gene_Functions import kl_corr_cfai
+from RandomField_Gene_Functions import kl_nocorr_cfai
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -107,4 +106,3 @@ def random_samples_generate_kl(proj_path):  # generating random field of landsli
                            samples_num, n_nonb, parti_nonb_type, ndim, dr, proj_path)
     else:
         return 2
-
