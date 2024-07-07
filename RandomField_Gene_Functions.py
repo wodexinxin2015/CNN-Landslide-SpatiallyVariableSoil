@@ -1,10 +1,9 @@
 # ----------------------------------------------------------------------------------------------------------------------
-# RandomField_Gene_Fuctions.py
+# RandomField_Gene_Functions.py
 # - functions used in the genrating process of landslide random fields
 # -Coded by Prof. Weijie Zhang, GeoHohai, Hohai University, Nanjing, China
 # ----------------------------------------------------------------------------------------------------------------------
 import numpy as np
-import scipy as sp
 import torch
 import os
 
@@ -465,4 +464,3 @@ def kl_nocorr_cfai(parti_x, parti_para, a_x, x_trans, range_max, randf_flag, ran
                                randf_svp[para_no], range_max[2], range_max[2], parti_nonb_type, para_no, n_nonb, klterm)
             # output to files
             data_to_imd(parti_x, parti_para, dr, ndim, n_nonb, proj_path, step_s, parti_nonb_type)
-
