@@ -5,6 +5,8 @@
 # ----------------------------------------------------------------------------------------------------------------------
 import os
 import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
 import torch
 import torch.nn as nn
 import torchmetrics as tm
@@ -440,7 +442,21 @@ def train_test_cnn_function(proj_path_train, proj_path_test, device_type):
                 if device_type == torch.device("cuda"):
                     del data_3, label_3, output_3
                     torch.cuda.empty_cache()  # clean the cache
-    return loss_holder_train, loss_holder_test, simu_score_train, simu_score_test
+    # plot the relationship between loss_value and iteration step
+    loss_df_1 = pd.DataFrame(loss_holder_train, columns=['step', 'loss'])
+    loss_df_2 = pd.DataFrame(loss_holder_test, columns=['step', 'loss'])
+    plt.plot(loss_df_1['loss'].values, 'go', markersize=2)
+    plt.plot(loss_df_2['loss'].values, 'mo', markersize=2)
+    plt.xlabel('Iteration step')
+    plt.ylabel('Loss')
+    plt.show()
+    # save training data in the log file
+    score_train_df = pd.DataFrame(simu_score_train, columns=['step', 'score-per', 'score-r2'])
+    score_test_df = pd.DataFrame(simu_score_test, columns=['step', 'score-per', 'score-r2'])
+    loss_df_1.to_csv('1-loss-process_train.txt', sep='\t', index=False)
+    loss_df_2.to_csv('1-loss-process_test.txt', sep='\t', index=False)
+    score_train_df.to_csv('1-score-train-process.txt', sep='\t', index=False)
+    score_test_df.to_csv('1-score-test-process.txt', sep='\t', index=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
