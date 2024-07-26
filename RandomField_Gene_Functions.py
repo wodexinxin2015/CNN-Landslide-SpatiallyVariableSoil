@@ -329,6 +329,7 @@ def data_to_imd(parti_x, parti_para, dr, ndim, n_nonb, proj_path, no_file, parti
     else:  # Windows platform
         file_feature_out = proj_path + r'\\features-' + f"{no_file + 1:0>5}" + r'.imd'
     torch.save(feat_ten, file_feature_out)
+    print(grid_dim)
 
 
 # ----------------------------------------------------------------------------------------------------------------------

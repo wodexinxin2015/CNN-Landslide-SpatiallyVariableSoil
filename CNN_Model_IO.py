@@ -5,9 +5,8 @@
 # -output predicted results from the prediction of landslides
 # -Coded by Prof. Weijie Zhang, GeoHohai, Hohai University, Nanjing, China
 # ----------------------------------------------------------------------------------------------------------------------
-import numpy as np
-import torch
 import os
+import torch
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -51,21 +50,3 @@ def predict_tensor_fromfile(proj_path):
     # return
     feature_data = (torch.stack(feature_data_temp)).float()
     return feature_data
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# output results of cross validation to csv
-def cross_vali_results_output(proj_path, data):
-    print("")
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# output results of cross validation to csv
-def train_test_results_output(proj_path, data):
-    print("")
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# output results of prediction to csv
-def prediction_results_output(proj_path, data):
-    print("")

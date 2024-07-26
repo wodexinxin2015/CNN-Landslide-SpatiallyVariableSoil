@@ -3,6 +3,7 @@
 # -functions in the train, test and prediction of CNN model of landslide run-out distance,coverage area dn impact force
 # -Coded by Prof. Weijie Zhang, GeoHohai, Hohai University, Nanjing, China
 # ----------------------------------------------------------------------------------------------------------------------
+import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,6 +11,7 @@ import torchmetrics as tm
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from CNN_Model_IO import tensor_load_fromfile
+from CNN_Model_IO import predict_tensor_fromfile
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -103,6 +105,7 @@ class landslide_cnn(nn.Module):
 # ----------------------------------------------------------------------------------------------------------------------
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
+
     def __init__(self, patience=7, verbose=False, delta=0):
         """
         Args:
@@ -192,9 +195,9 @@ def k_fold(device_t, hyper_inst, k_k, train_feat, train_label):
         data_valid = torch.utils.data.TensorDataset(feat_valid, label_valid)
         # train the network
         if device_t == torch.device("cuda"):
-            torch.cuda.empty_cache()   # clean the cache
-        train_loss, valid_loss, train_acc, valid_acc, e_stop = train_process\
-            (cnn_land_inst, device_t, data_train, data_valid, hyper_inst)
+            torch.cuda.empty_cache()  # clean the cache
+        train_loss, valid_loss, train_acc, valid_acc, e_stop = train_process(cnn_land_inst, device_t, data_train,
+                                                                             data_valid, hyper_inst)
         train_loss_sum += train_loss[-1]
         valid_loss_sum += valid_loss[-1]
         train_acc_sum += train_acc[-1]
@@ -225,11 +228,11 @@ def train_process(net, device_t, data_train, data_valid, hyper_inst):
         optimizer = torch.optim.Adagrad(net.parameters(), hyper_inst.learn_rate)
 
     # define the loss function
-    if hyper_inst.loss_type == 1:
+    if hyper_inst.type_loss == 1:
         criterion = nn.MSELoss(reduction='mean').to(device_t)  # mean squared error function
-    elif hyper_inst.loss_type == 2:
+    elif hyper_inst.type_loss == 2:
         criterion = nn.CrossEntropyLoss().to(device_t)  # cross entropy error function
-    elif hyper_inst.loss_type == 3:
+    elif hyper_inst.type_loss == 3:
         criterion = nn.PoissonNLLLoss().to(device_t)  # PoissonNLLLoss function
     else:
         criterion = nn.PoissonNLLLoss().to(device_t)  # PoissonNLLLoss function
@@ -305,11 +308,31 @@ def train_process(net, device_t, data_train, data_valid, hyper_inst):
 
 # ----------------------------------------------------------------------------------------------------------------------
 # cross validation function to determine hyperparameters
-def cross_validation_function(proj_path_train, proj_path_test, device_type):
+def cross_validation_function(proj_path_train, device_type):
+    k_k = 10
     hyper_inst = hyper_para()
     # load tensor data from files
     feature_data_train, label_data_train = tensor_load_fromfile(proj_path_train)  # train features and labels from files
-
+    t_loss_1, v_loss_1, t_acc_1, v_acc_1, e_s_1 = k_fold(device_type, hyper_inst, k_k, feature_data_train,
+                                                         label_data_train)
+    t_loss_2, v_loss_2, t_acc_2, v_acc_2, e_s_2 = k_fold(device_type, hyper_inst, k_k, feature_data_train,
+                                                         label_data_train)
+    t_loss_3, v_loss_3, t_acc_3, v_acc_3, e_s_3 = k_fold(device_type, hyper_inst, k_k, feature_data_train,
+                                                         label_data_train)
+    t_loss_4, v_loss_4, t_acc_4, v_acc_4, e_s_4 = k_fold(device_type, hyper_inst, k_k, feature_data_train,
+                                                         label_data_train)
+    v_acc = (v_acc_1 + v_acc_2 + v_acc_3 + v_acc_4) * 0.25
+    t_loss = (t_loss_2 + t_loss_2 + t_loss_3 + t_loss_4) * 0.25
+    v_loss = (v_loss_2 + v_loss_2 + v_loss_3 + v_loss_4) * 0.25
+    t_acc = (t_acc_1 + t_acc_2 + t_acc_3 + t_acc_4) * 0.25
+    e_s = (e_s_1 + e_s_2 + e_s_3 + e_s_4) * 0.25
+    # print the result
+    print("----------------------------------------")
+    print("The best set of hyperparameters:")
+    print('learn_rate:{:.4f}, batch_size:{:2d}'.format(hyper_inst.learn_rate, hyper_inst.batch_s))
+    print('early stopping epoch:{:.1f}'.format(e_s))
+    print('average train loss:{:.4f}, average train accuracy:{}'.format(t_loss, t_acc))
+    print('average valid loss:{:.4f}, average valid accuracy:{}'.format(v_loss, v_acc))
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -366,22 +389,22 @@ def train_test_cnn_function(proj_path_train, proj_path_test, device_type):
     for epoch in range(hyper_inst.epoch):
         # form the data loader
         data_load_train = DataLoader(train_dataset, hyper_inst.batch_s, shuffle=True)
-        for (data, targets) in data_load_train:                  # get x and y from mini batch
-            x, y = data.to(device_type), targets.to(device_type)      # put minibatch on device
-            pred = cnn_land_inst.forward(x)                          # forward propagation
-            loss = loss_func(pred, y)                  # calculate the loss value
-            optimizer.zero_grad()                    # clear the previous gradients
-            loss.backward()                          # backward propagation
-            optimizer.step()                         # optimization of internal parameters
+        for (data, targets) in data_load_train:  # get x and y from mini batch
+            x, y = data.to(device_type), targets.to(device_type)  # put minibatch on device
+            pred = cnn_land_inst.forward(x)  # forward propagation
+            loss = loss_func(pred, y)  # calculate the loss value
+            optimizer.zero_grad()  # clear the previous gradients
+            loss.backward()  # backward propagation
+            optimizer.step()  # optimization of internal parameters
             # delete the tensor object and clean the cache
             if device_type == torch.device("cuda"):
                 del x, y, pred
                 torch.cuda.empty_cache()  # clean the cache
 
             # calculating the similarity score for the training data
-            for (data, label) in enumerate(train_loader_all):
+            for (data_2, label_2) in enumerate(train_loader_all):
                 # the result of forward process
-                data_2, label_2 = data.to(device_type), label.to(device_type)
+                data_2, label_2 = data_2.to(device_type), label_2.to(device_type)
                 output_2 = cnn_land_inst.forward(data_2)
                 if hyper_inst.output_size == 1:
                     score_train_per = accuracy_fun_1(torch.squeeze(output_2), torch.squeeze(label_2)).cpu()
@@ -423,4 +446,24 @@ def train_test_cnn_function(proj_path_train, proj_path_test, device_type):
 # ----------------------------------------------------------------------------------------------------------------------
 # prediction function using the trained CNN model
 def prediction_cnn_function(proj_path, device_type):
-    print("")
+    feature_data = predict_tensor_fromfile(proj_path)  # load the feature tensor from file
+    # initialize the hyperparameters
+    hyper_inst = hyper_para()
+    # CNN class instance
+    cnn_land_inst = landslide_cnn(hyper_inst.size_c, hyper_inst.filter_n_1, hyper_inst.kernel_size_1,
+                                  hyper_inst.stride_1, hyper_inst.padding_1, hyper_inst.pool_size_1,
+                                  hyper_inst.pool_stride_1, hyper_inst.filter_n_2, hyper_inst.kernel_size_2,
+                                  hyper_inst.stride_2, hyper_inst.padding_2, hyper_inst.pool_size_2,
+                                  hyper_inst.pool_stride_2, hyper_inst.filter_n_3, hyper_inst.kernel_size_3,
+                                  hyper_inst.stride_3, hyper_inst.padding_3, hyper_inst.linear_size_4,
+                                  hyper_inst.linear_size_5, hyper_inst.output_size).to(device_type)
+    # load the model state from file
+    cnn_land_inst.load_state_dict(torch.load('0-model.pt'))
+    # predict the labels using the forward process
+    label_out = cnn_land_inst.forward(feature_data.to(device_type))
+    # write results
+    if os.sep == "/":  # linux platform
+        file_label_out = proj_path + r'/Predicted-labels.txt'
+    else:  # Windows platform
+        file_label_out = proj_path + r'\\Predicted-labels.txt'
+    np.savetxt(file_label_out, label_out.detach().numpy(), fmt='%.6f', delimiter=',')

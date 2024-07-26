@@ -115,6 +115,7 @@ def particle_to_images():
                 else:  # Windows platform
                     file_feature_out = proj_path + r'\\label-' + f"{no_file:0>4}" + r'.imd'
                 torch.save(label_ten, file_feature_out)
+                print(grid_dim)
             else:
                 return 1
             # ----------------------------------------------------------------------------------------------------------
@@ -122,5 +123,3 @@ def particle_to_images():
             chara = input("Continue (y) or Exit (n) for the particle data to images:  \n")
             flag = (chara == 'y' or chara == 'Y')
             no_file = no_file + 1
-
-

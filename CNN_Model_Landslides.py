@@ -34,25 +34,30 @@ while check:
     # running of each subroutine
     if type_mode == 1:
         particle_to_images()   # 1--converting particle data to *.imd files;
+        print("Particles to images has finished.\n")
     elif type_mode == 2:
         # input the working folder
         proj_path = input("Please input the working folder:\n")
         # input the type of random field generating method
         random_samples_generate_kl(proj_path)   # 1--generating random samples of landslide using KL expansion
+        print("Generation of random fields has finished.\n")
     elif type_mode == 3:
         # input the working folder
         proj_path_train = input("Please input the train folder: \n")
         proj_path_test = input("Please input the test folder: \n")
-        cross_validation_function(proj_path_train, proj_path_test, device)
+        cross_validation_function(proj_path_train, device)
+        print("K-fold cross validation has finished.\n")
     elif type_mode == 4:
         # input the working folder
         proj_path_train = input("Please input the train folder: \n")
         proj_path_test = input("Please input the test folder: \n")
         train_test_cnn_function(proj_path_train, proj_path_test, device)
+        print("Train and test of CNN model has finished.\n")
     elif type_mode == 5:
         # input the working folder
-        proj_path = input("Please input the working folder: \n")
+        proj_path = input("Please input the working folder for prediction: \n")
         prediction_cnn_function(proj_path, device)
+        print("Prediction using the trained model has finished.\n")
     else:
         print("The type of function type is incorrect! \n")
     # check if continue
